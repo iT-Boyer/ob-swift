@@ -30,6 +30,25 @@
 ;;; Code:
 (require 'ob)
 
+(defgroup ob-swift nil
+  "Org Mode blocks for Swift."
+  :prefix "ob-swift-"
+  :group 'org)
+
+(defvar swift-mode:repl-executable nil)
+
+(defcustom ob-swift-executable swift-mode:repl-executable
+  "Swift REPL executable for ob-swift."
+  :type 'string
+  :safe #'stringp
+  :group 'ob-swift)
+
+(defcustom ob-swift-default-session "*swift*"
+  "Specify ob-swift session name."
+  :type 'string
+  :safe #'stringp
+  :group 'ob-swift)
+
 (defvar ob-swift-process-output "")
 
 (defvar ob-swift-eoe "ob-swift-eoe")
@@ -38,7 +57,6 @@
   (let ((session (cdr (assoc :session params))))
     (if (string= "none" session)
         (ob-swift--eval body)
-      (ob-swift--ensure-session session)
       (ob-swift--eval-in-repl session body))))
 
 (defun ob-swift--eval (body)
@@ -47,35 +65,41 @@
     (shell-command-on-region (point-min) (point-max) "swift -" nil 't)
     (buffer-string)))
 
-(defun ob-swift--ensure-session (session)
-  (let ((name (format "*ob-swift-%s*" session)))
-    (unless (and (get-process name)
-                 (process-live-p (get-process name)))
-      (let ((process (with-current-buffer (get-buffer-create name)
-                       (start-process name name "swift"))))
-        (set-process-filter process 'ob-swift--process-filter)
-        (ob-swift--wait "Welcome to Swift")))))
-
-(defun ob-swift--process-filter (process output)
-  (setq ob-swift-process-output (concat ob-swift-process-output output)))
-
-(defun ob-swift--wait (pattern)
-  (while (not (string-match-p pattern ob-swift-process-output))
-    (sit-for 0.5)))
+(defun ob-swift--initiate-session (session)
+  (unless (fboundp 'run-swift)
+    (error "`run-swift' not defined, load swift-mode.el"))
+  (save-window-excursion
+    (let ((name (or session ob-swift-default-session)))
+      (unless (and (get-buffer-process name)
+                   (process-live-p (get-buffer-process name)))
+        (call-interactively 'run-swift))
+      (get-buffer name))))
 
 (defun ob-swift--eval-in-repl (session body)
-  (let ((name (format "*ob-swift-%s*" session)))
-    (setq ob-swift-process-output "")
-    (process-send-string name (format "%s\n\"%s\"\n" body ob-swift-eoe))
-    (accept-process-output (get-process name) nil nil 1)
-    (ob-swift--wait ob-swift-eoe)
-    (replace-regexp-in-string
-     (format "^\\$R[0-9]+: String = \"%s\"\n" ob-swift-eoe) ""
-     (replace-regexp-in-string
-      "^\\([0-9]+\\. \\)+\\([0-9]+> \\)*" ""
-      (replace-regexp-in-string
-       "^\\([0-9]+> \\)+" ""
-       ob-swift-process-output)))))
+  (let ((full-body (org-babel-expand-body:generic body params))
+        (session (ob-swift--initiate-session session))
+        (pt (lambda ()
+              (marker-position
+               (process-mark (get-buffer-process session))))))
+    (org-babel-comint-in-buffer session
+      (let ((start (funcall pt)))
+        (with-temp-buffer
+          (insert full-body)
+          (comint-send-region session (point-min) (point-max))
+          (comint-send-string session "\n"))
+        (while (equal start (funcall pt)) (sleep-for 0.1))
+        (save-excursion
+          (buffer-substring
+           (save-excursion
+             (goto-char start)
+             (next-line)
+             (move-beginning-of-line nil)
+             (point-marker))
+           (save-excursion
+             (goto-char (funcall pt))
+             (previous-line)
+             (move-end-of-line nil)
+             (point-marker))))))))
 
 (provide 'ob-swift)
 ;;; ob-swift.el ends here
