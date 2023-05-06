@@ -66,21 +66,27 @@
     (buffer-string)))
 
 (defun ob-swift--initiate-session (session)
+  (message "初始化 session %s" session)
   (unless (fboundp 'run-swift)
     (error "`run-swift' not defined, load swift-mode.el"))
   (save-window-excursion
     (let ((name (or session ob-swift-default-session)))
+      (message "进程 name %s" name)
       (unless (and (get-buffer-process name)
                    (process-live-p (get-buffer-process name)))
+        (message "初始化 session 执行 run-swift")
         (call-interactively 'run-swift))
+      (message "初始化 session 结果 %s"  name)
       (get-buffer name))))
 
 (defun ob-swift--eval-in-repl (session body)
   (let ((full-body (org-babel-expand-body:generic body params))
         (session (ob-swift--initiate-session session))
         (pt (lambda ()
+              (message "获取session 进程 %s" (get-buffer-process session))
               (marker-position
                (process-mark (get-buffer-process session))))))
+    (message "------ %s" session)
     (org-babel-comint-in-buffer session
       (let ((start (funcall pt)))
         (with-temp-buffer
