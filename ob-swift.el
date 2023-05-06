@@ -42,8 +42,8 @@
   :type 'string
   :safe #'stringp
   :group 'ob-swift)
-
-(defcustom ob-swift-default-session "*swift*"
+;;
+(defcustom ob-swift-default-session "*Swift REPL [swift repl]*"
   "Specify ob-swift session name."
   :type 'string
   :safe #'stringp
@@ -81,21 +81,17 @@
       (message "进程名称： %s" name)
       (unless (and (get-buffer-process name)
                    (process-live-p (get-buffer-process name)))
-        ;; (setq swift-mode:repl-buffer name)
-        ;; (message "开启新的进程：%s" swift-mode:repl-buffer)
         ;; 调用函数`run-swift`创建并执行一个 Swift REPL 进程
         ;; (swift-mode:run-repl swift-mode:repl-executable t t)
-        ;; (call-interactively 'run-swift)
-        (with-current-buffer (get-buffer-create name)
-        (message "开启新的进程：%s" name)
-          (erase-buffer)
-          (setq-default coding-system-for-write 'utf-8-unix)
-          (setq buffer-file-coding-system 'utf-8-unix)
-          (start-process name (current-buffer) "swift" "repl")
-          (swift-repl-mode)
-          ;; (run-swift swift-mode:repl-executable nil nil)
-          ))
-      (message "初始化 session 结果 %s" (get-buffer-process name))
+        (call-interactively 'run-swift)
+        ;; (let ((process (with-current-buffer (get-buffer-create name)
+        ;;                  (message "开启新的进程：%s" name)
+        ;;                  (erase-buffer)
+        ;;                  (swift-repl-mode)
+        ;;                  (setq-default coding-system-for-write 'utf-8-unix)
+        ;;                  (setq buffer-file-coding-system 'utf-8-unix)
+        ;;                  (start-process name name "swift" "repl")))))
+        )
       (get-buffer name))))
 
 (defun ob-swift--eval-in-repl (session body)
