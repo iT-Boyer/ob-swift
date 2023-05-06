@@ -127,45 +127,3 @@
 
 (provide 'ob-swift)
 ;;; ob-swift.el ends here
-
-(with-current-buffer (get-buffer-create name)
-  (erase-buffer)
-  (start-process name (current-buffer) "swift" "repl")
-  (swift-repl-mode)
-  ;; (run-swift swift-mode:repl-executable nil nil)
-  )
-在emacs 中 使用上述代码新建 buffer 的每行的结尾都出现字符,怎么解决这个问题？
-Welcome to Apple Swift version 5.8 (swiftlang-5.8.0.124.2 clang-1403.0.22.11.100).
-Welcome to Apple Swift version 5.8 (swiftlang-5.8.0.124.2 clang-1403.0.22.11.100).
-Type :help for assistance.
-1> a: Int = 1
-
-
-
-这个问题通常是因为在 buffer 中使用了不正确的换行符导致的。可以尝试在代码中添加以下语句来设置换行符类型：
-
-```
-(setq buffer-file-coding-system 'utf-8-unix)
-```
-
-这将设置使用 Unix 风格的换行符。您也可以根据需要使用其他换行符类型。
-
-设置为 utf-8-unix 之后，每行结尾的字符仍然存在
-
-
-如果设置换行符类型后每行结尾的字符仍然存在，可以尝试将以下代码添加到你的 Emacs 配置文件（如 ~/.emacs.d/init.el）中：
-
-```
-(setq-default buffer-file-coding-system 'utf-8-unix)
-(setq-default coding-system-for-write 'utf-8-unix)
-(prefer-coding-system 'utf-8-unix)
-```
-
-这会增强 Emacs 在处理文件时的一致性，并将缓冲区的默认文件编码设置为 Unix 风格的 UTF-8 编码，从而避免每行结尾的字符问题。
-
-在使用 `get-buffer-create` 函数时，
-如果指定的 `name` 已经存在于 Emacs 中，则函数会返回对应的 buffer，否则会创建一个新的 buffer。
-在你的代码中，多余的字符是因为 `name` 变量的值不是一个合法的 buffer 名称，导致 `get-buffer-create` 创建了一个带有多余字符的 buffer 名称。
-可以尝试修改 `name` 变量的值，确保它是一个合法的 buffer 名称，即只包含字母、数字、下划线和连接线等字符。
-例如，可以使用 `(concat "swift-repl-" (number-to-string (random)))` 来生成一个随机的 buffer 名称。
-这个问题是因为 `(message "开启新的进程：%s" name)` 中的 `%s` 并没有被成功替换为 `name`。可以尝试使用 `(format "开启新的进程：%s" name)` 替代这行代码来解决这个问题。
