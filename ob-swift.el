@@ -99,6 +99,43 @@
         (session (ob-swift--initiate-session session))
         (pt (lambda ()
               (marker-position
+               (process-mark (get-buffer-process session)))))
+        (raw-output)
+        results)
+    (setq raw-output
+          (org-babel-comint-in-buffer session
+            (let ((start (funcall pt)))
+              (with-temp-buffer
+                (insert full-body)
+                (comint-send-region session (point-min) (point-max))
+                (comint-send-string session "\n//----")
+                (comint-send-string session "\n"))
+              (while (equal start (funcall pt)) (sleep-for 0.1))
+              (save-excursion
+                (buffer-substring
+                 (save-excursion
+                   (goto-char start)
+                   (next-line)
+                   (move-beginning-of-line nil)
+                   ;; (re-search-forward "^[0-9]+>[\t]*" nil 'move)
+                   (point-marker))
+                 (save-excursion
+                   (goto-char (funcall pt))
+                   (previous-line)
+                   (move-end-of-line nil)
+                   ;; (re-search-backward "^[0-9]+>[\t]*" nil 'move)
+                   (point-marker)))))
+            ))
+    (message "原始数据------++++: %s" raw-output)
+    (car (last (split-string raw-output "//----\n")))
+    ))
+
+
+(defun ob-swift--eval-in-repl2 (session body)
+  (let ((full-body (org-babel-expand-body:generic body params))
+        (session (ob-swift--initiate-session session))
+        (pt (lambda ()
+              (marker-position
                (process-mark (get-buffer-process session))))))
     (message "------ %s" session)
     (org-babel-comint-in-buffer session
@@ -106,6 +143,7 @@
         (with-temp-buffer
           (insert full-body)
           (comint-send-region session (point-min) (point-max))
+          (comint-send-string session "\n//----")
           (comint-send-string session "\n"))
         (while (equal start (funcall pt)) (sleep-for 0.1))
         (save-excursion
@@ -114,11 +152,13 @@
              (goto-char start)
              (next-line)
              (move-beginning-of-line nil)
+             ;; (re-search-forward "^[0-9]+>[\t]*" nil 'move)
              (point-marker))
            (save-excursion
              (goto-char (funcall pt))
              (previous-line)
              (move-end-of-line nil)
+             ;; (re-search-backward "^[0-9]+>[\t]*" nil 'move)
              (point-marker))))))))
 
 (provide 'ob-swift)
