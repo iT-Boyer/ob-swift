@@ -58,6 +58,8 @@
 (defun org-babel-execute:swift (body params)
   ;; 获取参数列表中 `:session` 参数的值，即 REPL 会话名称
   (let ((session (cdr (assoc :session params))))
+    ;; 从buffer 列表中查找
+    (setq session (get-match-buffer-name session))
     ;; 如果 `:session` 参数的值为 "none"，表示不使用 REPL，直接调用 `ob-swift--eval` 函数执行代码
     (if (string= "none" session)
         (ob-swift--eval body)
@@ -69,6 +71,13 @@
     (insert body)
     (shell-command-on-region (point-min) (point-max) "swift -" nil 't)
     (buffer-string)))
+;; 在通过字符串匹配 buffer 名称，返回包含 swift repl 字符串的 buffer 名称。
+(defun get-match-buffer-name (str)
+  "Return the buffer whose name contains 'swift repl'."
+  (catch 'buffer-found (dolist (buf (buffer-list))
+                         (when (string-match (concat "\\[swift repl[^\\]*" str) (buffer-name buf))
+                           (throw 'buffer-found (buffer-name buf)))))
+    )
 
 (defun ob-swift--initiate-session (session)
   (message "初始化 session: %s" session)
